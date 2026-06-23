@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Time-Series Aggregation Tool</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --card: #21263a;
+    --border: #2e3450;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --success: #22c55e;
+    --error: #ef4444;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .header-badge { background: var(--accent); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 32px; }
+  .tab {
+    padding: 14px 22px; font-size: 13px; font-weight: 500; cursor: pointer;
+    border-bottom: 2px solid transparent; color: var(--muted);
+    transition: all .2s; white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .8px;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title span { font-size: 16px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+  input, select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; outline: none; transition: border .2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+
+  .btn {
+    padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .2s; display: inline-flex;
+    align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-success { background: rgba(34,197,94,.15); color: var(--success); }
+  .badge-error   { background: rgba(239,68,68,.15);  color: var(--error); }
+  .badge-running { background: rgba(59,130,246,.15); color: var(--accent); }
+  .badge-pending { background: rgba(148,163,184,.1); color: var(--muted); }
+
+  .alert {
+    padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    margin-bottom: 14px; display: none;
+  }
+  .alert.show { display: flex; align-items: center; gap: 8px; }
+  .alert-success { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); color: var(--success); }
+  .alert-error   { background: rgba(239,68,68,.12);  border: 1px solid rgba(239,68,68,.3);  color: var(--error); }
+  .alert-info    { background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.3); color: var(--accent); }
+
+  .progress-wrap { background: var(--surface); border-radius: 8px; height: 10px; overflow: hidden; margin: 8px 0; }
+  .progress-bar  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 8px; transition: width .4s ease; }
+
+  .mapping-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mapping-table th {
+    text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mapping-table td { padding: 9px 12px; border-bottom: 1px solid rgba(46,52,80,.5); }
+  .mapping-table tr:last-child td { border-bottom: none; }
+  .mapping-table select { padding: 5px 8px; font-size: 12px; }
+
+  .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .history-table th {
+    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .6px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .history-table td { padding: 11px 14px; border-bottom: 1px solid rgba(46,52,80,.4); }
+  .history-table tr:hover td { background: rgba(255,255,255,.02); }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .kpi-value.blue { color: var(--accent); }
+  .kpi-value.green { color: var(--success); }
+  .kpi-value.cyan { color: var(--accent2); }
+
+  .section-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-size: 17px; font-weight: 700; }
+  .section-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  .job-status-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; display: none;
+  }
+  .job-status-box.show { display: block; }
+  .job-meta { display: flex; gap: 20px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+
+  /* SQLite path row — hidden by default */
+  .sqlite-row { display: none; margin-top: 12px; }
+
+  @media(max-width: 900px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media(max-width: 700px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .tabs { overflow-x: auto; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Time-Series Aggregation Tool
+  </div>
+  <span class="header-badge">v1.0</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('configure')">⚙️ Configure</div>
+  <div class="tab" onclick="showTab('mapping')">🗂 Mapping</div>
+  <div class="tab" onclick="showTab('run')">▶ Run Job</div>
+  <div class="tab" onclick="showTab('history')">📋 History</div>
+</div>
+
+<div class="main">
+<div id="page-configure" class="page active">
+
+  <div class="section-row">
+    <div>
+      <div class="section-title">Database Configuration</div>
+      <div class="section-sub">Connect your source and target databases</div>
+    </div>
+  </div>
+
+  <!-- Source DB -->
+  <div class="card">
+    <div class="card-title"><span>📥</span> Source Database</div>
+    <div id="src-alert" class="alert"></div>
+    <div class="grid-3">
+      <div>
+        <label>Database Type</label>
+        <select id="src-type" onchange="onDbTypeChange('src')">
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="mongodb">MongoDB</option>
+          <option value="sqlite">SQLite</option>
+        </select>
+      </div>
+      <div id="src-host-wrap">
+        <label>Host</label>
+        <input id="src-host" type="text" value="localhost"/>
+      </div>
+      <div id="src-port-wrap">
+        <label>Port</label>
+        <input id="src-port" type="text" value="5432"/>
+      </div>
+    </div>
+
+    <!-- SQLite file path row -->
+    <div class="sqlite-row" id="src-sqlite-row">
+      <label>SQLite File Path</label>
+      <input id="src-sqlite-path" type="text" placeholder="C:\path\to\database.sqlite"/>
+    </div>
+
+    <div class="grid-3" style="margin-top:12px" id="src-creds-row">
+      <div>
+        <label>Database Name</label>
+        <input id="src-db" type="text" value="testdb"/>
+      </div>
+      <div>
+        <label>Username</label>
+        <input id="src-user" type="text" value="postgres"/>
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="src-pass" type="password" placeholder="••••••••"/>
+      </div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="testConnection('src')">🔌 Test Connection</button>
+      <div id="src-status"></div>
+    </div>
+
+    <div id="src-table-section" style="display:none; margin-top:18px">
+      <hr class="divider" style="margin:14px 0">
+      <div class="grid-2">
+        <div>
+          <label>Source Table</label>
+          <select id="src-table" onchange="onSrcTableChange()">
+            <option value="">— Select table —</option>
+          </select>
+        </div>
+        <div>
+          <label>Timestamp Column</label>
+          <select id="src-ts-col">
+            <option value="">— Select after table —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target DB -->
+  <div class="card">
+    <div class="card-title"><span>📤</span> Target Database</div>
+    <div id="tgt-alert" class="alert"></div>
+    <div class="grid-3">
+      <div>
+        <label>Database Type</label>
+        <select id="tgt-type" onchange="onDbTypeChange('tgt')">
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="mongodb">MongoDB</option>
+          <option value="sqlite">SQLite</option>
+        </select>
+      </div>
+      <div id="tgt-host-wrap">
+        <label>Host</label>
+        <input id="tgt-host" type="text" value="localhost"/>
+      </div>
+      <div id="tgt-port-wrap">
+        <label>Port</label>
+        <input id="tgt-port" type="text" value="5432"/>
+      </div>
+    </div>
+
+    <!-- SQLite file path row -->
+    <div class="sqlite-row" id="tgt-sqlite-row">
+      <label>SQLite File Path</label>
+      <input id="tgt-sqlite-path" type="text" placeholder="C:\path\to\output.sqlite"/>
+    </div>
+
+    <div class="grid-3" style="margin-top:12px" id="tgt-creds-row">
+      <div>
+        <label>Database Name</label>
+        <input id="tgt-db" type="text" value="testdb"/>
+      </div>
+      <div>
+        <label>Username</label>
+        <input id="tgt-user" type="text" value="postgres"/>
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="tgt-pass" type="password" placeholder="••••••••"/>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:12px">
+      <div>
+        <label>Target Table Name</label>
+        <input id="tgt-table" type="text" value="machine_metrics_agg"/>
+      </div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="testConnection('tgt')">🔌 Test Connection</button>
+      <div id="tgt-status"></div>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end">
+    <button class="btn btn-success" onclick="goToMapping()">Next: Configure Mapping →</button>
+  </div>
+</div>
+
+<!-- MAPPING PAGE -->
+<div id="page-mapping" class="page">
+  <div class="section-row">
+    <div>
+      <div class="section-title">Property & Aggregation Mapping</div>
+      <div class="section-sub">Select aggregation function for each numeric column</div>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="loadMapping()">📂 Load Saved</button>
+      <button class="btn btn-outline btn-sm" onclick="saveMapping()">💾 Save Mapping</button>
+    </div>
+  </div>
+
+  <div id="mapping-alert" class="alert"></div>
+
+  <div class="card">
+    <div class="card-title"><span>⏱</span> Aggregation Time Window</div>
+    <div class="grid-3">
+      <div>
+        <label>Time Bucket Size</label>
+        <select id="time-bucket">
+          <option value="1m">1 Minute</option>
+          <option value="5m" selected>5 Minutes</option>
+          <option value="15m">15 Minutes</option>
+          <option value="30m">30 Minutes</option>
+          <option value="1h">1 Hour</option>
+          <option value="4h">4 Hours</option>
+          <option value="12h">12 Hours</option>
+          <option value="1d">1 Day</option>
+        </select>
+      </div>
+      <div>
+        <label>Start Date/Time</label>
+        <input id="start-range" type="datetime-local"/>
+      </div>
+      <div>
+        <label>End Date/Time</label>
+        <input id="end-range" type="datetime-local"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>🔢</span> Column Aggregation Rules</div>
+    <div id="mapping-body">
+      <div class="empty">
+        <div class="empty-icon">🔗</div>
+        Connect to a source database first to load columns
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end">
+    <button class="btn btn-success" onclick="showTab('run')">Next: Run Job →</button>
+  </div>
+</div>
+
+<!-- RUN PAGE -->
+<div id="page-run" class="page">
+  <div class="section-title" style="margin-bottom:20px">Job Execution</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Rows Ingested</div>
+      <div class="kpi-value blue" id="kpi-ingested">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Aggregated Output</div>
+      <div class="kpi-value green" id="kpi-output">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Process Time</div>
+      <div class="kpi-value cyan" id="kpi-time">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Nodes</div>
+      <div class="kpi-value" style="color:var(--warn)" id="kpi-nodes">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Pipeline Health</div>
+      <div class="kpi-value green" id="kpi-health">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>📋</span> Job Summary</div>
+    <div class="grid-2" style="font-size:13px; gap:10px">
+      <div><span style="color:var(--muted)">Source Table:</span> <strong id="sum-src">—</strong></div>
+      <div><span style="color:var(--muted)">Target Table:</span> <strong id="sum-tgt">—</strong></div>
+      <div><span style="color:var(--muted)">Time Bucket:</span> <strong id="sum-bucket">—</strong></div>
+      <div><span style="color:var(--muted)">Date Range:</span> <strong id="sum-range">—</strong></div>
+      <div><span style="color:var(--muted)">Mappings:</span> <strong id="sum-mappings">—</strong></div>
+      <div><span style="color:var(--muted)">Timestamp Col:</span> <strong id="sum-ts">—</strong></div>
+    </div>
+    <div style="margin-top:18px; display:flex; gap:10px">
+      <button id="run-btn" class="btn btn-success" onclick="runJob()">▶ Run Aggregation Job</button>
+    </div>
+  </div>
+
+  <div id="job-status-box" class="job-status-box">
+    <div style="display:flex; align-items:center; justify-content:space-between">
+      <div style="font-weight:600; font-size:14px">Job Progress</div>
+      <span id="job-badge" class="badge badge-running">Running</span>
+    </div>
+    <div class="progress-wrap" style="margin-top:14px">
+      <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+    </div>
+    <div id="progress-pct" style="font-size:12px; color:var(--muted); margin-top:6px">0% complete</div>
+    <div id="job-error" class="alert alert-error" style="margin-top:10px"></div>
+    <div class="job-meta">
+      <div>Job ID: <span id="job-id-display" style="color:var(--text)">—</span></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:20px">
+    <div class="card">
+      <div class="card-title"><span>📊</span> Data Ingestion Volume</div>
+      <div style="position:relative; height:220px">
+        <canvas id="chart-ingestion"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📈</span> Processing Latency (ms)</div>
+      <div style="position:relative; height:220px">
+        <canvas id="chart-latency"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS PREVIEW -->
+  <div class="card" id="results-preview-card" style="display:none; margin-top:20px">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0"><span>🔍</span> Aggregated Results Preview</div>
+      <button class="btn btn-outline btn-sm" onclick="loadResultsPreview()">🔄 Refresh</button>
+    </div>
+    <div id="results-preview-body">
+      <div class="empty">Run a job to see results here</div>
+    </div>
+  </div>
+
+  <!-- RESULTS PREVIEW -->
+  <div class="card" id="results-preview-card" style="display:none; margin-top:20px">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0"><span>🔍</span> Aggregated Results Preview</div>
+      <button class="btn btn-outline btn-sm" onclick="loadResultsPreview()">🔄 Refresh</button>
+    </div>
+    <div id="results-preview-body">
+      <div class="empty">Run a job to see results here</div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY PAGE -->
+<div id="page-history" class="page">
+  <div class="section-row">
+    <div>
+      <div class="section-title">Job History</div>
+      <div class="section-sub">All previous aggregation runs</div>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="loadHistory()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0; overflow:hidden">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Start Time</th><th>End Time</th><th>Source Table</th>
+          <th>Target Table</th><th>Rows</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr><td colspan="6" class="empty"><div class="empty-icon" style="font-size:24px">📭</div>No job runs yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+const state = {
+  srcConnected: false,
+  tgtConnected: false,
+  srcTables: [],
+  numericColumns: [],
+  allColumns: [],
+  mappings: {},
+  currentJobId: null,
+  pollTimer: null,
+};
+
+// ── Port defaults per DB type ──
+const DB_DEFAULTS = {
+  postgresql: { port: '5432', user: 'postgres' },
+  mysql:      { port: '3306', user: 'root' },
+  mongodb:    { port: '27017', user: '' },
+  sqlite:     { port: '', user: '' },
+};
+
+// ── Show/hide fields based on DB type ──
+function onDbTypeChange(prefix) {
+  const type = document.getElementById(prefix + '-type').value;
+  const defaults = DB_DEFAULTS[type];
+
+  // Update port and username defaults
+  document.getElementById(prefix + '-port').value = defaults.port;
+  document.getElementById(prefix + '-user').value = defaults.user;
+
+  const isSQLite = type === 'sqlite';
+
+  // Show/hide SQLite path row
+  document.getElementById(prefix + '-sqlite-row').style.display = isSQLite ? 'block' : 'none';
+
+  // Show/hide host/port/creds for SQLite
+  document.getElementById(prefix + '-host-wrap').style.display   = isSQLite ? 'none' : 'block';
+  document.getElementById(prefix + '-port-wrap').style.display   = isSQLite ? 'none' : 'block';
+  document.getElementById(prefix + '-creds-row').style.display   = isSQLite ? 'none' : 'grid';
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['configure','mapping','run','history'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (name === 'run') refreshSummary();
+  if (name === 'history') loadHistory();
+}
+
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = `alert alert-${type} show`;
+  el.innerHTML = (type==='success'?'✅':type==='error'?'❌':'ℹ️') + ' ' + msg;
+  if (type !== 'error') setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function getConfig(prefix) {
+  const type = document.getElementById(prefix + '-type').value;
+  if (type === 'sqlite') {
+    return {
+      db_type: 'sqlite',
+      sqlite_path: document.getElementById(prefix + '-sqlite-path').value,
+    };
+  }
+  return {
+    db_type: type,
+    host:     document.getElementById(prefix + '-host').value,
+    port:     document.getElementById(prefix + '-port').value,
+    database: document.getElementById(prefix + '-db').value,
+    username: document.getElementById(prefix + '-user').value,
+    password: document.getElementById(prefix + '-pass').value,
+  };
+}
+
+async function testConnection(prefix) {
+  const config = getConfig(prefix);
+  const statusEl = document.getElementById(prefix + '-status');
+  statusEl.innerHTML = '<span style="color:var(--muted);font-size:13px">Connecting…</span>';
+
+  try {
+    const res = await fetch('/api/test-connection', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(config)
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      statusEl.innerHTML = '<span class="badge badge-success">✓ Connected</span>';
+      showAlert(prefix + '-alert', 'success', 'Connection successful!');
+      if (prefix === 'src') {
+        state.srcConnected = true;
+        state.srcTables = data.tables || [];
+        const tblSel = document.getElementById('src-table');
+        tblSel.innerHTML = '<option value="">— Select table —</option>' +
+          state.srcTables.map(t => `<option value="${t}">${t}</option>`).join('');
+        document.getElementById('src-table-section').style.display = 'block';
+      } else {
+        state.tgtConnected = true;
+      }
+    } else {
+      statusEl.innerHTML = '<span class="badge badge-error">✗ Failed</span>';
+      showAlert(prefix + '-alert', 'error', data.detail || 'Connection failed');
+    }
+  } catch (err) {
+    statusEl.innerHTML = '<span class="badge badge-error">✗ Error</span>';
+    showAlert(prefix + '-alert', 'error', 'Network error — is the server running?');
+  }
+}
+
+async function onSrcTableChange() {
+  const table = document.getElementById('src-table').value;
+  if (!table) return;
+  const config = { ...getConfig('src'), table };
+  try {
+    const res = await fetch('/api/discover-schema', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(config)
+    });
+    const data = await res.json();
+    state.allColumns    = data.all_columns || [];
+    state.numericColumns = data.numeric_columns || [];
+
+    const tsEl = document.getElementById('src-ts-col');
+    tsEl.innerHTML = state.allColumns.map(c => `<option value="${c}">${c}</option>`).join('');
+    const tsGuess = state.allColumns.find(c => c.toLowerCase().includes('time') || c.toLowerCase().includes('ts'));
+    if (tsGuess) tsEl.value = tsGuess;
+
+    buildMappingTable();
+  } catch (err) { console.error(err); }
+}
+
+const AGG_FNS = ['MIN','MAX','MEAN','SUM','COUNT','FIRST','LAST','STDDEV','MEDIAN','P95'];
+
+function buildMappingTable() {
+  const body = document.getElementById('mapping-body');
+  if (!state.numericColumns.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>No numeric columns found in this table</div>';
+    return;
+  }
+  let html = `<table class="mapping-table">
+    <thead><tr><th>Column</th><th>Data Type</th><th>Aggregation Function</th></tr></thead><tbody>`;
+  state.numericColumns.forEach(col => {
+    const saved = state.mappings[col] || 'MEAN';
+    const opts = AGG_FNS.map(f => `<option value="${f}" ${f===saved?'selected':''}>${f}</option>`).join('');
+    html += `<tr>
+      <td><strong>${col}</strong></td>
+      <td><span style="color:var(--accent2);font-size:11px">NUMERIC</span></td>
+      <td><select onchange="state.mappings['${col}']=this.value">${opts}</select></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML = html;
+  state.numericColumns.forEach(col => { if (!state.mappings[col]) state.mappings[col] = 'MEAN'; });
+}
+
+function goToMapping() {
+  if (!state.srcConnected) { alert('Please test the source database connection first.'); return; }
+  if (!document.getElementById('src-table').value) { alert('Please select a source table.'); return; }
+  showTab('mapping');
+}
+
+async function saveMapping() {
+  const table = document.getElementById('src-table').value;
+  if (!table) { showAlert('mapping-alert','error','No source table selected'); return; }
+  const payload = { table, mappings: state.mappings, time_bucket: document.getElementById('time-bucket').value };
+  const res = await fetch('/api/config-mapping', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  if (res.ok) showAlert('mapping-alert','success','Mapping saved successfully');
+  else showAlert('mapping-alert','error','Failed to save mapping');
+}
+
+async function loadMapping() {
+  const table = document.getElementById('src-table').value;
+  if (!table) { showAlert('mapping-alert','error','Select a source table first'); return; }
+  const res = await fetch(`/api/config-mapping/${table}`);
+  if (res.ok) {
+    const data = await res.json();
+    state.mappings = data.mappings || {};
+    if (data.time_bucket) document.getElementById('time-bucket').value = data.time_bucket;
+    buildMappingTable();
+    showAlert('mapping-alert','success','Mapping loaded');
+  } else {
+    showAlert('mapping-alert','error','No saved mapping found for this table');
+  }
+}
+
+function refreshSummary() {
+  document.getElementById('sum-src').textContent     = document.getElementById('src-table').value || '—';
+  document.getElementById('sum-tgt').textContent     = document.getElementById('tgt-table').value || '—';
+  document.getElementById('sum-bucket').textContent  = document.getElementById('time-bucket').value || '—';
+  document.getElementById('sum-range').textContent   =
+    (document.getElementById('start-range').value||'?') + ' → ' + (document.getElementById('end-range').value||'?');
+  document.getElementById('sum-ts').textContent      = document.getElementById('src-ts-col').value || '—';
+  const count = Object.keys(state.mappings).length;
+  document.getElementById('sum-mappings').textContent = count ? `${count} column(s)` : '—';
+  loadKPIs();
+  loadCharts();
+}
+
+async function loadKPIs() {
+  try {
+    const res = await fetch('/api/kpis');
+    const d = await res.json();
+    document.getElementById('kpi-ingested').textContent = d.total_ingested;
+    document.getElementById('kpi-output').textContent   = d.aggregated_output;
+    document.getElementById('kpi-time').textContent     = d.avg_process_time;
+    document.getElementById('kpi-nodes').textContent    = d.active_nodes;
+    document.getElementById('kpi-health').textContent   = d.pipeline_health;
+  } catch(e) {}
+}
+
+async function runJob() {
+  const srcTable = document.getElementById('src-table').value;
+  const tgtTable = document.getElementById('tgt-table').value;
+  const tsCol    = document.getElementById('src-ts-col').value;
+  if (!srcTable || !tgtTable || !tsCol) {
+    alert('Please complete configuration (source table, target table, timestamp column) before running.');
+    return;
+  }
+  if (!Object.keys(state.mappings).length) {
+    alert('Please configure at least one column mapping.');
+    return;
+  }
+  const payload = {
+    source_config:    getConfig('src'),
+    target_config:    getConfig('tgt'),
+    source_table:     srcTable,
+    target_table:     tgtTable,
+    timestamp_column: tsCol,
+    time_bucket:      document.getElementById('time-bucket').value,
+    start_range:      document.getElementById('start-range').value.replace('T',' ') + ':00',
+    end_range:        document.getElementById('end-range').value.replace('T',' ') + ':00',
+    mappings:         state.mappings,
+  };
+  document.getElementById('run-btn').disabled = true;
+  try {
+    const res = await fetch('/api/jobs', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    state.currentJobId = data.job_id;
+    const box = document.getElementById('job-status-box');
+    box.classList.add('show');
+    document.getElementById('job-id-display').textContent = data.job_id;
+    document.getElementById('job-badge').className = 'badge badge-running';
+    document.getElementById('job-badge').textContent = 'Running';
+    document.getElementById('job-error').classList.remove('show');
+    setProgress(0);
+    pollJobStatus(data.job_id);
+  } catch(err) {
+    document.getElementById('run-btn').disabled = false;
+    alert('Failed to start job — is the server running?');
+  }
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '% complete';
+}
+
+function pollJobStatus(jobId) {
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`);
+      const data = await res.json();
+      setProgress(data.progress || 0);
+      if (data.status === 'Completed') {
+        clearInterval(state.pollTimer);
+        document.getElementById('job-badge').className = 'badge badge-success';
+        document.getElementById('job-badge').textContent = 'Completed';
+        document.getElementById('run-btn').disabled = false;
+        loadKPIs();
+        loadCharts();
+        loadResultsPreview();
+      } else if (data.status === 'Failed') {
+        clearInterval(state.pollTimer);
+        document.getElementById('job-badge').className = 'badge badge-error';
+        document.getElementById('job-badge').textContent = 'Failed';
+        document.getElementById('run-btn').disabled = false;
+        const errEl = document.getElementById('job-error');
+        errEl.innerHTML = '❌ ' + (data.error_message || 'Unknown error');
+        errEl.classList.add('show');
+      }
+    } catch(e) { clearInterval(state.pollTimer); }
+  }, 800);
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/jobs/history');
+    const rows = await res.json();
+    const tbody = document.getElementById('history-body');
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty"><div style="font-size:24px">📭</div>No job runs yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${r.start_time||'—'}</td>
+        <td>${r.end_time||'—'}</td>
+        <td>${r.source_table}</td>
+        <td>${r.target_table}</td>
+        <td>${r.row_count??'—'}</td>
+        <td><span class="badge badge-${r.status==='Completed'?'success':r.status==='Failed'?'error':'running'}">${r.status}</span></td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('history-body').innerHTML =
+      '<tr><td colspan="6" class="empty">Failed to load history</td></tr>';
+  }
+}
+
+async function exportCSV() {
+  const res = await fetch('/api/jobs/history');
+  const rows = await res.json();
+  if (!rows.length) { alert('No history to export'); return; }
+  const headers = ['start_time','end_time','source_table','target_table','row_count','status'];
+  const csv = [headers.join(','),
+    ...rows.map(r => headers.map(h => `"${r[h]??''}"`).join(','))
+  ].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'job_history.csv';
+  a.click();
+}
+
+let chartIngestion = null, chartLatency = null;
+
+function initCharts(data) {
+  const gridColor = 'rgba(46,52,80,0.6)', tickColor = '#94a3b8';
+  const baseOpts = () => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor:'#1a1d27', borderColor:'#2e3450', borderWidth:1, titleColor:'#e2e8f0', bodyColor:'#94a3b8' }
+    },
+    scales: {
+      x: { grid:{color:gridColor}, ticks:{color:tickColor, font:{size:11}} },
+      y: { grid:{color:gridColor}, ticks:{color:tickColor, font:{size:11}} }
+    }
+  });
+  if (chartIngestion) chartIngestion.destroy();
+  chartIngestion = new Chart(document.getElementById('chart-ingestion'), {
+    type: 'bar',
+    data: { labels: data.intervals, datasets: [{
+      label:'Rows Ingested', data:data.ingestion_bars,
+      backgroundColor:'rgba(59,130,246,0.7)', borderColor:'#3b82f6', borderWidth:1, borderRadius:5
+    }]},
+    options: baseOpts()
+  });
+  if (chartLatency) chartLatency.destroy();
+  chartLatency = new Chart(document.getElementById('chart-latency'), {
+    type: 'line',
+    data: { labels: data.intervals, datasets: [{
+      label:'Latency (ms)', data:data.latency_lines,
+      borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,0.1)',
+      pointBackgroundColor:'#06b6d4', pointRadius:4, tension:0.4, fill:true
+    }]},
+    options: baseOpts()
+  });
+}
+
+async function loadCharts() {
+  try {
+    const res = await fetch('/api/chart-data');
+    initCharts(await res.json());
+  } catch(e) {
+    initCharts({
+      intervals:['00:00','04:00','08:00','12:00','16:00','20:00'],
+      ingestion_bars:[110,160,95,200,135,105],
+      latency_lines:[170,120,150,85,110,165]
+    });
+  }
+}
+
+
+async function loadResultsPreview() {
+  const tgtTable = document.getElementById('tgt-table').value;
+  if (!tgtTable) return;
+
+  const body = document.getElementById('results-preview-body');
+  body.innerHTML = '<div class="empty">Loading...</div>';
+  document.getElementById('results-preview-card').style.display = 'block';
+
+  // Build config explicitly including password
+  const tgtConfig = {
+    db_type:  document.getElementById('tgt-type').value,
+    host:     document.getElementById('tgt-host').value,
+    port:     document.getElementById('tgt-port').value,
+    database: document.getElementById('tgt-db').value,
+    username: document.getElementById('tgt-user').value,
+    password: document.getElementById('tgt-pass').value,
+    sqlite_path: document.getElementById('tgt-sqlite-path') ? document.getElementById('tgt-sqlite-path').value : ''
+  };
+
+  try {
+    const res = await fetch('/api/preview-results', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        target_config: tgtConfig,
+        target_table: tgtTable
+      })
+    });
+    const data = await res.json();
+    console.log("Data Response",data)
+    if (data.error) {
+      body.innerHTML = `<div class="empty">❌ ${data.error}</div>`;
+      return;
+    }
+    if (!data.columns || data.columns.length === 0) {
+      body.innerHTML = '<div class="empty">No results found. Run a job first.</div>';
+      return;
+    }
+
+    let html = `<div style="font-size:12px; color:var(--muted); margin-bottom:10px">Showing ${data.rows.length} rows</div>`;
+    html += '<div style="overflow-x:auto"><table class="history-table"><thead><tr>';
+    data.columns.forEach(col => { html += `<th>${col}</th>`; });
+    html += '</tr></thead><tbody>';
+    data.rows.forEach(row => {
+      html += '<tr>';
+      row.forEach(val => {
+        const display = val === null ? '<span style="color:var(--muted)">null</span>' :
+          typeof val === 'number' ? val.toFixed(4) : val;
+        html += `<td>${display}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    body.innerHTML = html;
+
+  } catch(e) {
+    body.innerHTML = `<div class="empty">❌ Network error: ${e.message}</div>`;
+  }
+}
+
+window.onload = () => {
+  const now = new Date();
+  const yesterday = new Date(now - 86400000);
+  const fmt = d => d.toISOString().slice(0,16);
+  document.getElementById('start-range').value = fmt(yesterday);
+  document.getElementById('end-range').value   = fmt(now);
+  loadCharts();
+};
+</script>
+</body>
+</html>

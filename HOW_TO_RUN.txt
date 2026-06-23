@@ -1,0 +1,65 @@
+====================================================
+ HOW TO RUN THE TIME-SERIES AGGREGATION TOOL
+====================================================
+
+⚠️  IMPORTANT — THE CAUSE OF YOUR ERROR:
+-----------------------------------------
+You were opening index.html directly by double-clicking it.
+This opens the file as:  file:///C:/...index.html
+The browser BLOCKS all API calls in this mode (CORS policy).
+
+✅  CORRECT WAY — always run via the Flask server:
+---------------------------------------------------
+
+WINDOWS:
+  1. Double-click  start.bat
+  2. Wait for "Starting server at: http://localhost:5001"
+  3. Open your browser and go to:  http://localhost:5001
+  
+  OR manually:
+    cd "Time series aggregation tool"
+    venv\Scripts\activate
+    python app.py
+
+MAC / LINUX:
+  1. Run:  bash start.sh
+  2. Open your browser and go to:  http://localhost:5001
+  
+  OR manually:
+    source venv/bin/activate
+    python app.py
+
+
+FIRST-TIME SETUP (if you don't have a venv yet):
+--------------------------------------------------
+  python -m venv venv
+  
+  Windows:   venv\Scripts\activate
+  Mac/Linux: source venv/bin/activate
+  
+  pip install -r requirements.txt
+  python app.py
+
+
+WHAT WAS FIXED IN THIS VERSION:
+--------------------------------
+1. Added CORS headers to all API responses — the server now
+   properly handles cross-origin requests.
+   
+2. Added a /style.css route so the stylesheet loads correctly
+   when served through Flask.
+   
+3. Added start.bat (Windows) and start.sh (Mac/Linux) scripts
+   so you can launch the app with a single click/command.
+
+4. Flask now runs on http://localhost:5001 — always use this
+   URL in your browser, never open index.html directly.
+
+
+TROUBLESHOOTING:
+----------------
+- "python not found"  → install Python 3.10+ from python.org
+- "pip not found"     → use  python -m pip install ...
+- Port 5001 in use    → change port in app.py last line:
+                        app.run(port=5002, ...)
+====================================================

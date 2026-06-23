@@ -1,0 +1,303 @@
+# Time Series Aggregation Tool
+
+## Overview
+
+The Time Series Aggregation Tool is a web-based application developed using Python and Flask. It allows users to load time-series machine metrics data, configure aggregation rules, execute aggregation jobs, and view results through a simple web interface.
+
+The application supports multiple database systems and provides configurable aggregation intervals for processing large volumes of time-series data efficiently.
+
+---
+
+## Features
+
+### Data Source Support
+- SQLite
+- MySQL
+- PostgreSQL
+- MongoDB 
+
+### Aggregation Functions
+The application supports standard aggregation operations such as:
+
+- Sum
+- Average
+- Minimum
+- Maximum
+- Count
+- First Value
+- Last Value
+- Median
+- Standard Deviation
+- Variance
+
+### Time Bucket Support
+Users can aggregate data into:
+
+- 1 Minute
+- 5 Minutes
+- 15 Minutes
+- 30 Minutes
+- 1 Hour
+- 4 Hours
+- 12 Hours
+- 1 Day
+
+### Additional Features
+- Property mapping configuration
+- Source and target database selection
+- Job execution tracking
+- Aggregation history
+- Data preview
+- REST API endpoints
+- JSON-based configuration storage
+
+---
+
+## Technology Stack
+
+### Backend
+- Python
+- Flask
+- Pandas
+- NumPy
+- SQLite3
+- SQLAlchemy
+
+### Database Support
+- SQLite
+- MySQL
+- PostgreSQL
+- MongoDB
+
+### Frontend
+- HTML
+- CSS
+- JavaScript
+
+---
+
+## Project Structure
+
+```
+TimeSeriesAggregation/
+│
+├── connector/
+│   ├── mysql_connector.py
+│   ├── postgres_connector.py
+│   ├── mongodb_connector.py
+│   └── sqlite_connector.py
+│
+├── data/
+│   ├── data.json
+│   ├── data.sql
+│   ├── database.sqlite
+│   ├── machine_metrics_2000.csv
+│   └── generate_data.py
+│
+├── scripts/
+│   └── setup_db.py
+│
+├── app.py
+├── index.html
+├── style.css
+├── requirements.txt
+├── cached_property_mappings.json
+└── README.md
+```
+
+---
+
+## Installation
+
+### 1. Clone Repository
+
+```bash
+git clone <repository-url>
+cd TimeSeriesAggregation
+```
+
+### 2. Create Virtual Environment
+
+Windows:
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+Linux/Mac:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Database Setup
+
+Run the setup script:
+
+```bash
+python scripts/setup_db.py
+```
+
+This creates the SQLite database and loads sample machine metrics data.
+
+---
+
+## Running the Application
+
+Start the Flask server:
+
+```bash
+python app.py
+```
+
+Open your browser:
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+## Workflow
+
+### Step 1: Select Source Database
+
+Choose the database containing raw time-series data.
+
+### Step 2: Configure Aggregation
+
+Select:
+
+- Source Property
+- Aggregation Function
+- Time Bucket
+- Date Range
+
+### Step 3: Execute Job
+
+Run the aggregation process.
+
+### Step 4: View Results
+
+Aggregated records are displayed and stored in the target database.
+
+---
+
+## Sample Dataset
+
+The project includes:
+
+```text
+machine_metrics_2000.csv
+```
+
+Containing machine sensor metrics such as:
+
+- Timestamp
+- Machine ID
+- Temperature
+- Pressure
+- Humidity
+- Vibration
+- Energy Consumption
+
+---
+
+## API Endpoints
+
+### Get Properties
+
+```http
+GET /api/properties
+```
+
+### Preview Data
+
+```http
+GET /api/preview
+```
+
+### Execute Aggregation
+
+```http
+POST /api/run-job
+```
+
+### Job History
+
+```http
+GET /api/jobs
+```
+
+---
+
+## Limitations
+
+### Apache Cassandra
+
+Apache Cassandra integration is currently excluded because:
+
+- Cassandra setup on Windows is complex.
+- Requires Java and additional configuration.
+- Compatibility issues may occur on local Windows environments.
+
+The application has been fully implemented using:
+
+- SQLite
+- MySQL
+- PostgreSQL
+
+which satisfy the primary project requirements.
+
+---
+
+## Future Enhancements
+
+- Full Cassandra Support
+- User Authentication
+- Scheduled Aggregation Jobs
+- Dashboard Analytics
+- Export Results to CSV/Excel
+- Real-Time Data Processing
+
+---
+
+## Testing
+
+The application has been tested for:
+
+- Database connectivity
+- Data loading
+- Aggregation execution
+- Time bucket calculations
+- UI functionality
+- API responses
+
+---
+
+## Author
+
+Developed as part of the Time Series Aggregation Tool project assignment.
+
+Technology Used:
+
+- Python
+- Flask
+- Pandas
+- NumPy
+- SQLite
+- MySQL
+- PostgreSQL
+- HTML
+- CSS
+- JavaScript

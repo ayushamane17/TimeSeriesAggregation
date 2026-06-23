@@ -1,0 +1,9 @@
+flask>=3.0.0
+pandas>=2.0.0
+numpy>=1.26.0
+
+# Install the connector(s) you actually use:
+psycopg2-binary>=2.9.9      # PostgreSQL
+mysql-connector-python>=8.3  # MySQL
+cassandra-driver>=3.29.0     # Apache Cassandra
+pymongo>=4.7.0               # MongoDB
